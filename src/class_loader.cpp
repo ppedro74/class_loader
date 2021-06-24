@@ -55,7 +55,9 @@ ClassLoader::ClassLoader(const std::string & library_path, bool ondemand_load_un
 : ondemand_load_unload_(ondemand_load_unload),
   library_path_(library_path),
   load_ref_count_(0),
-  plugin_ref_count_(0)
+  plugin_ref_count_(0),
+  class_loader_ref_count(0),
+  remove_when_possible(false)
 {
   CONSOLE_BRIDGE_logDebug(
     "class_loader.ClassLoader: "

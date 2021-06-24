@@ -54,6 +54,11 @@ MultiLibraryClassLoader::MultiLibraryClassLoader(bool enable_ondemand_loadunload
 MultiLibraryClassLoader::~MultiLibraryClassLoader()
 {
   shutdownAllClassLoaders();
+  for (auto & loader : impl_->active_class_loaders_) {
+    if (loader.second) {
+      loader.second->removeWhenPosible();
+    }
+  }
   delete impl_;
 }
 

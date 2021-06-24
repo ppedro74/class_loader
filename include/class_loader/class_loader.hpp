@@ -169,6 +169,7 @@ public:
   template<class Base>
   Base * createUnmanagedInstance(const std::string & derived_class_name)
   {
+    class_loader_ref_count--;
     return createRawInstance<Base>(derived_class_name, false);
   }
 
@@ -252,6 +253,15 @@ public:
   CLASS_LOADER_PUBLIC
   int unloadLibrary();
 
+  void removeWhenPosible()
+  {
+    this->remove_when_possible = true;
+    if (class_loader_ref_count == 0) {
+      unloadLibraryInternal(false);
+      delete this;
+    }
+  }
+
 private:
   /**
    * @brief Callback method when a plugin created by this class loader is destroyed
@@ -271,9 +281,15 @@ private:
     delete (obj);
     assert(plugin_ref_count_ > 0);
     --plugin_ref_count_;
-    if (plugin_ref_count_ == 0 && isOnDemandLoadUnloadEnabled()) {
+    --class_loader_ref_count;
+    if (plugin_ref_count_ <= 0 && isOnDemandLoadUnloadEnabled()) {
       if (!ClassLoader::hasUnmanagedInstanceBeenCreated()) {
-        unloadLibraryInternal(false);
+        if (class_loader_ref_count == 0) {
+          unloadLibraryInternal(false);
+        }
+        if (remove_when_possible) {
+          delete this;
+        }
       } else {
         CONSOLE_BRIDGE_logWarn(
           "class_loader::ClassLoader: "
@@ -331,7 +347,7 @@ private:
       std::lock_guard<std::recursive_mutex> lock(plugin_ref_count_mutex_);
       ++plugin_ref_count_;
     }
-
+    class_loader_ref_count++;
     return obj;
   }
 
@@ -365,6 +381,8 @@ private:
   int plugin_ref_count_;
   std::recursive_mutex plugin_ref_count_mutex_;
   static bool has_unmananged_instance_been_created_;
+  unsigned int class_loader_ref_count;
+  bool remove_when_possible;
 };
 
 }  // namespace class_loader
